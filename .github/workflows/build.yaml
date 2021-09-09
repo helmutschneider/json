@@ -1,0 +1,13 @@
+name: build
+on:
+  - push
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Clean rust
+        run: cargo clean --manifest-path="rust/Cargo.toml"
+      - name: Test rust
+        run: cargo test --manifest-path="rust/Cargo.toml"
