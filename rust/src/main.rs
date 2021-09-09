@@ -32,6 +32,26 @@ impl ParserState {
         return self.buffer[self.index];
     }
 
+    fn skip_whitespace(&mut self) {
+        while is_whitespace(self.peek()) {
+            self.move_next();
+        }
+    }
+
+    fn read_node(&mut self) -> JsonNode {
+        self.skip_whitespace();
+
+        let node: JsonNode = match self.peek() {
+            '"' => JsonNode::String(self.read_string()),
+            '[' => JsonNode::Array(self.read_array()),
+            _ => JsonNode::Null,
+        };
+
+        self.move_next();
+
+        return node;
+    }
+
     fn read_string(&mut self) -> String {
         assert_eq!('"', self.peek());
 
@@ -55,6 +75,24 @@ impl ParserState {
 
         return buffer;
     }
+
+    fn read_array(&mut self) -> Vec<JsonNode> {
+        assert_eq!('[', self.peek());
+
+        let mut out: Vec<JsonNode> = Vec::new();
+        self.move_next();
+
+        while self.peek() != ']' {
+            out.push(self.read_node());
+            self.skip_whitespace();
+
+            if self.peek() == ',' {
+                self.move_next();
+            }
+        }
+
+        return out;
+    }
 }
 
 fn is_whitespace(chr: char) -> bool {
@@ -69,18 +107,7 @@ impl Parser {
     }
 
     fn parse(&self, data: &str) -> JsonNode {
-        let mut state = ParserState::new(data);
-
-        while is_whitespace(state.peek()) {
-            state.move_next();
-        }
-
-        let node: JsonNode = match state.peek() {
-            '"' => JsonNode::String(state.read_string()),
-            _ => JsonNode::Null,
-        };
-
-        return node;
+        return ParserState::new(data).read_node();
     }
 }
 
@@ -103,5 +130,35 @@ mod tests {
         let parser = Parser::new();
         let result = parser.parse("\"swagger\\\"jagger\"");
         assert_eq!(JsonNode::String("swagger\"jagger".to_string()), result);
+    }
+
+    #[test]
+    fn parse_empty_array() {
+        let parser = Parser::new();
+        let result = parser.parse("[]");
+        assert_eq!(JsonNode::Array(vec![]), result);
+    }
+
+    #[test]
+    fn parse_array_of_strings() {
+        let parser = Parser::new();
+        let result = parser.parse("[\"yee\", \"boi\"]");
+        assert_eq!(
+            JsonNode::Array(vec![
+                JsonNode::String("yee".to_string()),
+                JsonNode::String("boi".to_string())
+            ]),
+            result
+        );
+    }
+
+    #[test]
+    fn parse_array_with_whitespace() {
+        let parser = Parser::new();
+        let result = parser.parse("[   \"boi\"  \n    ]");
+        assert_eq!(
+            JsonNode::Array(vec![JsonNode::String("boi".to_string())]),
+            result
+        );
     }
 }
