@@ -1,0 +1,28 @@
+# Folder view configuration files
+.DS_Store
+Desktop.ini
+
+# Thumbnail cache files
+._*
+Thumbs.db
+
+# Files that might appear on external disks
+.Spotlight-V100
+.Trashes
+
+/vendor
+/node_modules
+/rust/target
+.env
+
+.idea/
+.vscode/
+
+# Node version manager
+# https://github.com/creationix/nvm
+# Might unignore later
+.nvmrc
+
+# Prettier config
+# Might unignore later
+.prettierrc
