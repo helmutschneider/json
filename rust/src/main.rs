@@ -78,4 +78,18 @@ mod tests {
         map.insert("c".to_string(), JsonNode::String("d".to_string()));
         assert_eq!(JsonNode::Object(map), result);
     }
+
+    #[test]
+    fn parse_free_integer() {
+        let parser = JsonParser::new();
+        let result = parser.parse("123");
+        assert_eq!(JsonNode::Number(123.0), result);
+    }
+
+    #[test]
+    fn parse_free_float() {
+        let parser = JsonParser::new();
+        let result = parser.parse("123.5");
+        assert_eq!(JsonNode::Number(123.5), result);
+    }
 }
