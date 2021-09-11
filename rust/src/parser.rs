@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use crate::node::JsonNode;
 
 #[derive(Debug)]
-struct ParserState {
+struct JsonParserState {
     buffer: Vec<char>,
     index: usize,
 }
@@ -10,7 +12,7 @@ fn is_whitespace(chr: char) -> bool {
     return chr == ' ' || chr == '\r' || chr == '\n' || chr == '\t';
 }
 
-impl ParserState {
+impl JsonParserState {
     fn new(data: &str) -> Self {
         return Self {
             buffer: data.chars().collect::<Vec<char>>(),
@@ -38,10 +40,9 @@ impl ParserState {
         let node: JsonNode = match self.peek() {
             '"' => JsonNode::String(self.read_string()),
             '[' => JsonNode::Array(self.read_array()),
+            '{' => JsonNode::Object(self.read_object()),
             _ => JsonNode::Null,
         };
-
-        self.move_next();
 
         return node;
     }
@@ -67,6 +68,8 @@ impl ParserState {
             }
         }
 
+        self.move_next();
+
         return buffer;
     }
 
@@ -85,18 +88,46 @@ impl ParserState {
             }
         }
 
+        self.move_next();
+
+        return out;
+    }
+
+    fn read_object(&mut self) -> HashMap<String, JsonNode> {
+        assert_eq!('{', self.peek());
+
+        let mut out: HashMap<String, JsonNode> = HashMap::new();
+        self.move_next();
+
+        while self.peek() != '}' {
+            self.skip_whitespace();
+            let key = self.read_string();
+            self.skip_whitespace();
+            assert_eq!(':', self.peek());
+            self.move_next();
+            let value = self.read_node();
+            out.insert(key, value);
+            self.skip_whitespace();
+
+            if self.peek() == ',' {
+                self.move_next();
+            }
+        }
+
+        self.move_next();
+
         return out;
     }
 }
 
-pub struct Parser;
+pub struct JsonParser;
 
-impl Parser {
+impl JsonParser {
     pub fn new() -> Self {
         return Self {};
     }
 
     pub fn parse(&self, data: &str) -> JsonNode {
-        return ParserState::new(data).read_node();
+        return JsonParserState::new(data).read_node();
     }
 }
