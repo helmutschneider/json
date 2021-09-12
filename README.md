@@ -8,19 +8,14 @@ solely for learning purposes.
 All implementations should roughly follow this interface:
 
 ```
-type JsonObject
-    properties: Map<String, JsonNode>
-
-type JsonArray = Array<JsonNode>
-
 type JsonNode =
     | String
     | Number
     | Null
     | Boolean
-    | JsonObject
-    | JsonArray
+    | Map<String, JsonNode>
+    | Array<JsonNode>
 
-type Parser
+type JsonParser =
     fun parse(data: String) -> JsonNode
 ```
