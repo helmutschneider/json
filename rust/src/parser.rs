@@ -56,6 +56,14 @@ impl JsonParserState {
                 self.index += 4;
                 JsonNode::Null
             }
+            't' => {
+                self.index += 4;
+                JsonNode::Boolean(true)
+            }
+            'f' => {
+                self.index += 5;
+                JsonNode::Boolean(false)
+            }
             _ => JsonNode::Null,
         };
 
