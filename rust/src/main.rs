@@ -92,4 +92,20 @@ mod tests {
         let result = parser.parse("123.5");
         assert_eq!(JsonNode::Number(123.5), result);
     }
+
+    #[test]
+    fn parse_null() {
+        let parser = JsonParser::new();
+        let result = parser.parse("null");
+        assert_eq!(JsonNode::Null, result);
+    }
+
+    #[test]
+    fn parse_object_with_null() {
+        let parser = JsonParser::new();
+        let result = parser.parse("{ \"a\": null }");
+        let mut map = HashMap::<String, JsonNode>::new();
+        map.insert("a".to_string(), JsonNode::Null);
+        assert_eq!(JsonNode::Object(map), result);
+    }
 }

@@ -52,6 +52,10 @@ impl JsonParserState {
             '[' => JsonNode::Array(self.read_array()),
             '{' => JsonNode::Object(self.read_object()),
             ('0'..='9') => JsonNode::Number(self.read_number()),
+            'n' => {
+                self.index += 4;
+                JsonNode::Null
+            }
             _ => JsonNode::Null,
         };
 
