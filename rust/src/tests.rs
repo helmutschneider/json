@@ -131,7 +131,7 @@ fn parse_large_thing() {
         ],
         "children": [],
         "spouse": null
-      }
+    }
     "#;
 
     let parsed = JsonParser::new().parse(thing);
