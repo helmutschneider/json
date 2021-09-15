@@ -13,7 +13,8 @@ Thumbs.db
 /vendor
 /node_modules
 /rust/target
-/c/app
+/c/target
+
 .env
 
 .idea/
