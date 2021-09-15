@@ -6,17 +6,18 @@
 
 #define VECTOR_DEFAULT_CAPACITY 16
 
-#define VECTOR_DECL(TYPE_NAME, TYPE_ARG) \
-    typedef struct TYPE_NAME             \
-    {                                    \
-        size_t capacity;                 \
-        size_t length;                   \
-        TYPE_ARG *data;                  \
-    } TYPE_NAME##_t;                     \
-                                         \
-    struct TYPE_NAME TYPE_NAME##_make(); \
-                                         \
-    void TYPE_NAME##_push(struct TYPE_NAME *self, TYPE_ARG item);
+#define VECTOR_DECL(TYPE_NAME, TYPE_ARG)                          \
+    typedef struct TYPE_NAME                                      \
+    {                                                             \
+        size_t capacity;                                          \
+        size_t length;                                            \
+        TYPE_ARG *data;                                           \
+    } TYPE_NAME##_t;                                              \
+                                                                  \
+    struct TYPE_NAME TYPE_NAME##_make();                          \
+                                                                  \
+    void TYPE_NAME##_push(struct TYPE_NAME *self, TYPE_ARG item); \
+    void TYPE_NAME##_free(struct TYPE_NAME *self);
 
 #define VECTOR_IMPL(TYPE_NAME, TYPE_ARG)                                        \
     struct TYPE_NAME TYPE_NAME##_make()                                         \
@@ -39,6 +40,11 @@
             self->capacity = next_capacity;                                     \
         }                                                                       \
         self->data[self->length++] = item;                                      \
+    }                                                                           \
+                                                                                \
+    void TYPE_NAME##_free(struct TYPE_NAME *self)                               \
+    {                                                                           \
+        free(self->data);                                                       \
     }
 
 #endif

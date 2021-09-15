@@ -1,4 +1,5 @@
 #include <string.h>
+#include "vector.h"
 
 typedef enum
 {
@@ -37,8 +38,16 @@ static test_suite_t SUITE = {
         return TEST_FAIL;           \
     }
 
+#define ASSERT_NOT_EQ(EXPECTED, ACTUAL) \
+    if (EXPECTED == ACTUAL)             \
+    {                                   \
+        return TEST_FAIL;               \
+    }
+
 #define ASSERT_STR_EQ(EXPECTED, ACTUAL) \
     if (strcmp(EXPECTED, ACTUAL) != 0)  \
     {                                   \
         return TEST_FAIL;               \
     }
+
+VECTOR_DECL(vec_u8, uint8_t)

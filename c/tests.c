@@ -2,6 +2,8 @@
 #include "parser.h"
 #include "tests.h"
 
+VECTOR_IMPL(vec_u8, uint8_t)
+
 static parser_t p = {
     .index = 0,
     .length = 0,
@@ -166,6 +168,46 @@ static test_result_t parse_large_thing()
     return TEST_PASS;
 }
 
+static test_result_t vec_make()
+{
+    vec_u8_t vec = vec_u8_make();
+    ASSERT_EQ(0, vec.length);
+
+    vec_u8_free(&vec);
+
+    return TEST_PASS;
+}
+
+static test_result_t vec_push()
+{
+    vec_u8_t vec = vec_u8_make();
+    vec_u8_push(&vec, 42);
+    vec_u8_push(&vec, 13);
+
+    ASSERT_EQ(2, vec.length);
+    ASSERT_EQ(42, vec.data[0]);
+    ASSERT_EQ(13, vec.data[1]);
+
+    vec_u8_free(&vec);
+
+    return TEST_PASS;
+}
+
+static test_result_t vec_grow()
+{
+    vec_u8_t vec = vec_u8_make();
+    size_t old_capacity = vec.capacity;
+
+    for (size_t i = 0; i < VECTOR_DEFAULT_CAPACITY + 1; ++i)
+    {
+        vec_u8_push(&vec, 42);
+    }
+
+    ASSERT_NOT_EQ(old_capacity, vec.capacity);
+
+    return TEST_PASS;
+}
+
 int main()
 {
     TEST(parse_string);
@@ -181,6 +223,9 @@ int main()
     TEST(parse_object_with_null);
     TEST(parse_object_with_booleans);
     TEST(parse_large_thing);
+    TEST(vec_make);
+    TEST(vec_push);
+    TEST(vec_grow);
 
     int res = 0;
 
