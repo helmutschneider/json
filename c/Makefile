@@ -1,6 +1,11 @@
 OUT_BIN = ./target/app
 TEST_BIN = ./target/tests
-GCC_BIN = gcc -std=c17 -Wall -Wextra -pedantic
+GCC_BIN = gcc \
+  -std=c17 \
+  -Wall \
+  -Wextra \
+  -Werror \
+  -pedantic
 
 all:
 	${GCC_BIN} node.c parser.c main.c -o ${OUT_BIN}
