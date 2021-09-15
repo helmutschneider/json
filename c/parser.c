@@ -5,7 +5,7 @@
 #include "node.h"
 #include "parser.h"
 
-static node_t DEFAULT_NODE = {
+static const node_t DEFAULT_NODE = {
     .kind = NODE_KIND_NULL,
 };
 
@@ -14,28 +14,34 @@ parser_t parser_make()
     parser_t thing = {
         .index = 0,
         .length = 0,
+        .str = NULL,
     };
     return thing;
 }
 
-bool parser_is_eof(parser_t *self)
+static bool parser_is_eof(const parser_t *self)
 {
     return self->index >= self->length;
 }
 
-bool parser_is_whitespace(parser_t *self)
+static bool parser_is_whitespace(const parser_t *self)
 {
     char chr = self->str[self->index];
-
     return chr == ' ' || chr == '\r' || chr == '\n' || chr == '\t';
 }
 
-char parser_peek(parser_t *self)
+static bool parser_is_number_like(const parser_t *self)
+{
+    char chr = self->str[self->index];
+    return chr == '0' || chr == '1' || chr == '2' || chr == '3' || chr == '4' || chr == '5' || chr == '6' || chr == '7' || chr == '8' || chr == '9' || chr == '.';
+}
+
+static char parser_peek(const parser_t *self)
 {
     return self->str[self->index];
 }
 
-void parser_skip_whitespace(parser_t *self)
+static void parser_skip_whitespace(parser_t *self)
 {
     while (!parser_is_eof(self) && parser_is_whitespace(self))
     {
@@ -43,7 +49,7 @@ void parser_skip_whitespace(parser_t *self)
     }
 }
 
-vector_char_t parser_read_string(parser_t *self)
+static vector_char_t parser_read_string(parser_t *self)
 {
     assert(parser_peek(self) == '"');
 
@@ -69,7 +75,7 @@ vector_char_t parser_read_string(parser_t *self)
     return out;
 }
 
-vector_node_t parser_read_array(parser_t *self)
+static vector_node_t parser_read_array(parser_t *self)
 {
     assert(parser_peek(self) == '[');
 
@@ -93,7 +99,7 @@ vector_node_t parser_read_array(parser_t *self)
     return out;
 }
 
-vector_entry_t parser_read_object(parser_t *self)
+static vector_entry_t parser_read_object(parser_t *self)
 {
     assert(parser_peek(self) == '{');
     self->index += 1;
@@ -124,13 +130,37 @@ vector_entry_t parser_read_object(parser_t *self)
     return out;
 }
 
+static double parser_read_number(parser_t *self)
+{
+    size_t index = 0;
+    char buf[32];
+
+    while (parser_is_number_like(self))
+    {
+        buf[index] = parser_peek(self);
+        index += 1;
+        self->index += 1;
+    }
+
+    self->index += 1;
+
+    return strtod(buf, NULL);
+}
+
 node_t parser_read_node(parser_t *self)
 {
     parser_skip_whitespace(self);
 
     node_t node = DEFAULT_NODE;
 
-    char thing = parser_peek(self);
+    if (parser_is_number_like(self))
+    {
+        node.kind = NODE_KIND_NUMBER;
+        node.number = parser_read_number(self);
+        return node;
+    }
+
+    const char thing = parser_peek(self);
 
     switch (thing)
     {
@@ -179,7 +209,7 @@ node_t parser_read_node(parser_t *self)
     return node;
 }
 
-node_t parser_parse(parser_t *self, char *str)
+node_t parser_parse(parser_t *self, const char *str)
 {
     self->index = 0;
     self->str = str;

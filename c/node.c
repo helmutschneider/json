@@ -5,16 +5,6 @@ VECTOR_IMPL(vector_char, char)
 VECTOR_IMPL(vector_node, node_t)
 VECTOR_IMPL(vector_entry, entry_t)
 
-void object_put(vector_entry_t *self, const unsigned char *key, node_t value)
-{
-    entry_t e = {
-        .key = key,
-        .value = &value,
-    };
-
-    vector_entry_push(self, e);
-}
-
 static const char *INDENTS[] = {
     [0] = "",
     [1] = "  ",
@@ -28,7 +18,7 @@ static const char *INDENTS[] = {
     [9] = "                  ",
 };
 
-void print_vector_char(vector_char_t vec)
+static void print_vector_char(vector_char_t vec)
 {
     for (size_t i = 0; i < vec.length; ++i)
     {
@@ -36,7 +26,7 @@ void print_vector_char(vector_char_t vec)
     }
 }
 
-void print_node_with_depth(node_t node, uint64_t depth)
+static void print_node_with_depth(node_t node, uint64_t depth)
 {
     const char *name = NODE_KIND_NAMES[node.kind];
     const char *indent = INDENTS[depth];
@@ -71,6 +61,9 @@ void print_node_with_depth(node_t node, uint64_t depth)
         break;
     case NODE_KIND_BOOLEAN:
         printf("%s%s: %s\n", indent, name, node.boolean ? "true" : "false");
+        break;
+    case NODE_KIND_NUMBER:
+        printf("%s%s: %f\n", indent, name, node.number);
         break;
     }
 }
