@@ -18,6 +18,15 @@ static const char *INDENTS[] = {
     [9] = "                  ",
 };
 
+static const char *NODE_KIND_NAMES[] = {
+    [NODE_KIND_STRING] = "NODE_KIND_STRING",
+    [NODE_KIND_NUMBER] = "NODE_KIND_NUMBER",
+    [NODE_KIND_NULL] = "NODE_KIND_NULL",
+    [NODE_KIND_BOOLEAN] = "NODE_KIND_BOOLEAN",
+    [NODE_KIND_ARRAY] = "NODE_KIND_ARRAY",
+    [NODE_KIND_OBJECT] = "NODE_KIND_OBJECT",
+};
+
 static void print_vector_char(vector_char_t vec)
 {
     for (size_t i = 0; i < vec.length; ++i)

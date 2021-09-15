@@ -21,15 +21,6 @@ typedef enum
     NODE_KIND_OBJECT,
 } node_kind_t;
 
-static const char *NODE_KIND_NAMES[] = {
-    [NODE_KIND_STRING] = "NODE_KIND_STRING",
-    [NODE_KIND_NUMBER] = "NODE_KIND_NUMBER",
-    [NODE_KIND_NULL] = "NODE_KIND_NULL",
-    [NODE_KIND_BOOLEAN] = "NODE_KIND_BOOLEAN",
-    [NODE_KIND_ARRAY] = "NODE_KIND_ARRAY",
-    [NODE_KIND_OBJECT] = "NODE_KIND_OBJECT",
-};
-
 typedef struct node
 {
     node_kind_t kind;
