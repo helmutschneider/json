@@ -7,7 +7,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install opam
+          opam init --auto-setup
+          opam install dune
       - name: Rust
         run: cargo test --manifest-path="rust/Cargo.toml"
       - name: C
         run: make --directory=c tests
+      - name: OCaml
+        run: |
+          eval $(opam env)
+          dune runtest --root=ocaml
