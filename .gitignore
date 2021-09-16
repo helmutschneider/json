@@ -15,6 +15,7 @@ Thumbs.db
 /rust/target
 /c/target
 /ocaml/_build
+/_build
 
 .env
 
