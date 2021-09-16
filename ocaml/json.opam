@@ -1,0 +1,13 @@
+opam-version: "2.0"
+name: "json"
+version: "0.1"
+synopsis: "A rudimentary JSON parser"
+maintainer: "Johan Björk <johanimon@gmail.com>"
+authors: "Johan Björk <johanimon@gmail.com>"
+license: "MIT"
+dev-repo: "git+https://github.com/helmutschneider/json.git"
+depends: [ "ocaml" "ocamlfind" "ounit2" ]
+build: [
+  ["dune" "build"]
+]
+install: ["echo" "Bruh!"]

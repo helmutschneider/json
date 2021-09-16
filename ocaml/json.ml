@@ -1,3 +1,3 @@
-let square x = x * x
+open Lib
 
-let () = Printf.printf "Hello World! %d\n" (square 5)
+let () = Printf.printf "Hello World! %.2f\n" (square 5.0)

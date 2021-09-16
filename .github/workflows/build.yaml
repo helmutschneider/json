@@ -13,11 +13,14 @@ jobs:
           sudo apt-get -y install opam
           opam init --auto-setup
           opam install dune
-      - name: Rust
+      - name: "Test: Rust"
         run: cargo test --manifest-path="rust/Cargo.toml"
-      - name: C
+      - name: "Test: C"
         run: make --directory=c tests
-      - name: OCaml
+      - name: "Test: OCaml"
+        working-directory: ./ocaml
         run: |
           eval $(opam env)
-          dune runtest --root=ocaml
+          opam install --yes .
+          dune clean
+          dune runtest

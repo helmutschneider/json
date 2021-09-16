@@ -1,2 +1,3 @@
 (executable
- (name json))
+ (name json)
+ (libraries Lib))
