@@ -24,3 +24,6 @@ jobs:
           opam install --yes .
           dune clean
           dune runtest
+      - name: "Test: golang"
+        working-directory: ./golang
+        run: go test -test.v
