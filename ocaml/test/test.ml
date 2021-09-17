@@ -77,10 +77,10 @@ let test_big_thing _ =
   |big_thing}
   in
   let res = parse yee in
-  assert_bool "Bad!"
-    (match res with
-    | Object _ -> true
-    | _ -> false)
+  assert_equal (Some (String "646 555-4567"))
+    (child_at_path res "phoneNumbers.1.number");
+  assert_equal (Some (String "NY")) (child_at_path res "address.state");
+  assert_equal (Some Null) (child_at_path res "spouse")
 
 let suite =
   "Unit tests"

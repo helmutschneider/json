@@ -124,6 +124,27 @@ and read_object : parse_fn =
 
   { node = Object tbl; remainder = rem }
 
+let child_at_path : node -> string -> node option =
+ fun node path ->
+  let rec aux : node -> string list -> node option =
+   fun parent parts ->
+    match parts with
+    | [] -> Some parent
+    | head :: tail -> (
+        match parent with
+        | Array items ->
+            let index = int_of_string head in
+            let child = List.nth items index in
+            aux child tail
+        | Object entries ->
+            let key = head in
+            let child = Hashtbl.find entries key in
+            aux child tail
+        | _ -> None)
+  in
+  let parts = String.split_on_char '.' path in
+  aux node parts
+
 let parse : string -> node =
  fun str ->
   let chars = String.to_seq str |> List.of_seq in
