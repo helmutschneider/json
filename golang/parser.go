@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 type Parser struct {
 	buffer []rune
@@ -16,6 +19,10 @@ func newParser() Parser {
 
 func isWhitespace(chr rune) bool {
 	return chr == ' ' || chr == '\n' || chr == '\t' || chr == '\r'
+}
+
+func isNumberLike(chr rune) bool {
+	return chr == '0' || chr == '1' || chr == '2' || chr == '3' || chr == '4' || chr == '5' || chr == '6' || chr == '7' || chr == '8' || chr == '9' || chr == '.'
 }
 
 func (p *Parser) skipWhitespace() {
@@ -36,6 +43,12 @@ func (p *Parser) readNode() Node {
 	chr := p.peek()
 	var node Node = NullNode{}
 
+	if isNumberLike(chr) {
+		return NumberNode{
+			number: p.readNumber(),
+		}
+	}
+
 	switch chr {
 	case '"':
 		node = StringNode{
@@ -46,6 +59,27 @@ func (p *Parser) readNode() Node {
 		node = ArrayNode{
 			array: p.readArray(),
 		}
+		break
+	case '{':
+		node = ObjectNode{
+			entries: p.readObject(),
+		}
+		break
+	case 't':
+		node = BooleanNode{
+			boolean: true,
+		}
+		p.index += 4
+		break
+	case 'f':
+		node = BooleanNode{
+			boolean: false,
+		}
+		p.index += 5
+		break
+	case 'n':
+		node = NullNode{}
+		p.index += 4
 		break
 	}
 
@@ -85,12 +119,54 @@ func (p *Parser) readArray() []Node {
 		p.skipWhitespace()
 		if p.peek() == ',' {
 			p.moveNext()
+			p.skipWhitespace()
 		}
 	}
 
 	p.moveNext()
 
 	return stuff
+}
+
+func (p *Parser) readObject() map[string]Node {
+	p.expectRune('{')
+	p.moveNext()
+	out := map[string]Node{}
+	for p.peek() != '}' {
+		p.skipWhitespace()
+		key := p.readString()
+		p.skipWhitespace()
+		p.expectRune(':')
+		p.moveNext()
+		value := p.readNode()
+
+		out[key] = value
+
+		p.skipWhitespace()
+		if p.peek() == ',' {
+			p.moveNext()
+			p.skipWhitespace()
+		}
+	}
+	p.moveNext()
+	return out
+}
+
+func (p *Parser) readNumber() float64 {
+	carry := ""
+	for !p.isEof() && isNumberLike(p.peek()) {
+		carry += string(p.peek())
+		p.moveNext()
+	}
+	num, e := strconv.ParseFloat(carry, 64)
+	if e != nil {
+		return 0
+	}
+	return num
+}
+
+func (p *Parser) isEof() bool {
+	return p.index >= len(p.buffer)
 }
 
 func (p *Parser) peek() rune {
