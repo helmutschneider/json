@@ -10,7 +10,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get -y install opam
+          sudo apt-get -y install fpc opam
           opam init --auto-setup
           opam install dune
       - name: "Test: Rust"
@@ -24,6 +24,9 @@ jobs:
           opam install --yes .
           dune clean
           dune runtest
-      - name: "Test: golang"
+      - name: "Test: Golang"
         working-directory: ./golang
         run: go test -test.v
+      - name: "Test: Pascal"
+        working-directory: ./pascal
+        run: make tests
