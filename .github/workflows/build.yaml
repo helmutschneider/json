@@ -7,6 +7,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v1
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -30,3 +32,6 @@ jobs:
       - name: "Test: Pascal"
         working-directory: ./pascal
         run: make tests
+      - name: "Test: Zig"
+        working-directory: ./zig
+        run: zig test json.zig

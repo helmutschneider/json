@@ -17,6 +17,7 @@ Thumbs.db
 /ocaml/_build
 /_build
 /pascal/build
+/zig/zig-cache
 
 .env
 
