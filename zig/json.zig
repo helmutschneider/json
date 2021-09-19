@@ -7,18 +7,21 @@ fn println(str: []const u8) void {
     writer.print("{s}\n", .{str}) catch unreachable;
 }
 
+const STR_BUFFER_SIZE: usize = 64;
 const Str = struct {
-    buffer: [256]u8 = [_]u8{0} ** 256,
-    len: usize = 0,
+    buffer: [STR_BUFFER_SIZE]u8,
+    len: usize,
 
     pub fn init(data: []const u8) Str {
-        var str = Str{};
+        var str = Str{
+            .buffer = [_]u8{0} ** STR_BUFFER_SIZE,
+            .len = data.len,
+        };
         var i: usize = 0;
-        while (i < str.len) {
+        while (i < data.len) {
             str.buffer[i] = data[i];
             i += 1;
         }
-        str.len = i + 1;
         return str;
     }
 
@@ -79,8 +82,8 @@ const State = struct {
         self.expect('"');
         self.moveNext();
 
-        var buffer = [_]u8{0} ** 128;
-        var index: usize = 0;
+        var buffer = [_]u8{0} ** STR_BUFFER_SIZE;
+        var len: usize = 0;
 
         while (self.peek() != '"') {
             const isReadingEscapedCharacter = self.peek() == '\\';
@@ -89,19 +92,19 @@ const State = struct {
 
             if (isReadingEscapedCharacter) {
                 self.moveNext();
-                buffer[index] = self.peek();
+                buffer[len] = self.peek();
             } else {
-                buffer[index] = self.peek();
+                buffer[len] = self.peek();
             }
 
-            index += 1;
+            len += 1;
 
             self.moveNext();
         }
 
         self.moveNext();
 
-        return Str.init(buffer[0..(index + 1)]);
+        return Str.init(buffer[0..len]);
     }
 };
 
@@ -125,6 +128,13 @@ pub fn main() !void {
     const n = parser.parse("\"yee\"");
     const stdout = std.io.getStdOut().writer();
     try stdout.print("{s}\n", .{n});
+}
+
+test "Initialize the string type" {
+    const str = Str.init("Hello");
+
+    try t.expectEqual(@as(usize, 5), str.len);
+    try t.expectEqualStrings("Hello", str.toU8Slice());
 }
 
 test "Read string" {
