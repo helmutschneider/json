@@ -7,28 +7,33 @@ fn println(str: []const u8) void {
     writer.print("{s}\n", .{str}) catch unreachable;
 }
 
-const STR_BUFFER_SIZE: usize = 64;
-const Str = struct {
-    buffer: [STR_BUFFER_SIZE]u8,
-    len: usize,
+fn BufferedArray(comptime T: type, comptime N: usize) type {
+    return struct {
+        buffer: [N]T,
+        len: usize,
 
-    pub fn init(data: []const u8) Str {
-        var str = Str{
-            .buffer = [_]u8{0} ** STR_BUFFER_SIZE,
-            .len = data.len,
-        };
-        var i: usize = 0;
-        while (i < data.len) {
-            str.buffer[i] = data[i];
-            i += 1;
+        pub const BUFFER_SIZE = N;
+
+        pub fn init(data: []const T) @This() {
+            var thing = @This(){
+                .buffer = [_]u8{0} ** N,
+                .len = data.len,
+            };
+            var i: usize = 0;
+            while (i < data.len) {
+                thing.buffer[i] = data[i];
+                i += 1;
+            }
+            return thing;
         }
-        return str;
-    }
 
-    pub fn toU8Slice(self: Str) []const u8 {
-        return self.buffer[0..self.len];
-    }
-};
+        pub fn toSlice(self: @This()) []const T {
+            return self.buffer[0..self.len];
+        }
+    };
+}
+
+const Str = BufferedArray(u8, 128);
 const Node = union(enum) {
     string: Str,
     number: f64,
@@ -46,7 +51,7 @@ const State = struct {
     index: usize,
     buffer: []const u8,
 
-    pub fn readNode(self: *State) Node {
+    pub fn readNode(self: *@This()) Node {
         self.skipWhitespace();
 
         return switch (self.peek()) {
@@ -58,37 +63,35 @@ const State = struct {
         };
     }
 
-    fn peek(self: *State) u8 {
+    fn peek(self: *@This()) u8 {
         return self.buffer[self.index];
     }
 
-    fn expect(self: *State, chr: u8) void {
+    fn expect(self: *@This(), chr: u8) void {
         if (self.peek() != chr) {
             unreachable;
         }
     }
 
-    fn moveNext(self: *State) void {
+    fn moveNext(self: *@This()) void {
         self.index += 1;
     }
 
-    fn skipWhitespace(self: *State) void {
+    fn skipWhitespace(self: *@This()) void {
         while (isWhitespace(self.peek())) {
             self.moveNext();
         }
     }
 
-    fn readString(self: *State) Str {
+    fn readString(self: *@This()) Str {
         self.expect('"');
         self.moveNext();
 
-        var buffer = [_]u8{0} ** STR_BUFFER_SIZE;
+        var buffer = [_]u8{0} ** Str.BUFFER_SIZE;
         var len: usize = 0;
 
         while (self.peek() != '"') {
             const isReadingEscapedCharacter = self.peek() == '\\';
-
-            var arr = [_]u8{self.peek()};
 
             if (isReadingEscapedCharacter) {
                 self.moveNext();
@@ -134,7 +137,7 @@ test "Initialize the string type" {
     const str = Str.init("Hello");
 
     try t.expectEqual(@as(usize, 5), str.len);
-    try t.expectEqualStrings("Hello", str.toU8Slice());
+    try t.expectEqualStrings("Hello", str.toSlice());
 }
 
 test "Read string" {
