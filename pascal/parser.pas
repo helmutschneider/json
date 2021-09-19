@@ -2,7 +2,10 @@
 Function IsWhitespace(chr : Char) : Boolean;
 
 Begin
-  IsWhitespace := (chr = ' ') Or (chr = '\n') Or (chr = '\t') Or (chr = '\r');
+  // #9 = \t (tab)
+  // #13 = \r (carriage return)
+  IsWhitespace := (chr = ' ') Or (chr = sLineBreak) Or (chr = ''#9'')
+                  Or (chr = ''#13'');
 End;
 
 Function IsNumberLike(chr : Char) : Boolean;

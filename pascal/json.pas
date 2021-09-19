@@ -132,7 +132,7 @@ Function TestParseObject() : TestResult;
 
 Var o : ObjectNode;
 Begin
-  o := p.Parse('{ "a" : "b", "c": [ "d" ] }') as ObjectNode;
+  o := p.Parse('{ "a" : "b", '#9' '#10' "c": [ "d" ] }') as ObjectNode;
 
   If Not (o.Value[0].Key = 'a') Then
     Begin
