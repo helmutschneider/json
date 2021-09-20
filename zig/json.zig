@@ -3,18 +3,20 @@ const Parser = @import("parser.zig").Parser;
 const Node = @import("node.zig").Node;
 const t = std.testing;
 
-const str =
-    \\ ["a", "b", ["c"]]
-;
+fn println(thing: anytype) void {
+    std.io.getStdOut().writer().print("{s}\n", .{thing}) catch unreachable;
+}
 
 pub fn main() !void {
+    const str =
+        \\ ["a", "b", ["c"]]
+    ;
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = &arena.allocator;
     const parser = Parser.init(allocator);
     const n = parser.parse(str);
-    const stdout = std.io.getStdOut().writer();
-    try stdout.print("{s}\n", .{n});
+    println(n);
 }
 
 const E = error{
@@ -70,32 +72,37 @@ fn expectEqualNodes(expected: Node, actual: Node) E!void {
                 else => return E.TestUnexpectedError,
             }
         },
-        else => return E.TestUnexpectedError,
+        .number => |a| {
+            switch (actual) {
+                .number => |b| t.expectEqual(a, b) catch return E.TestUnexpectedError,
+                else => return E.TestUnexpectedError,
+            }
+        },
     }
 }
 
-test "Read string" {
+test "Parse string" {
     const parser = Parser.init(t.allocator);
     var node = parser.parse("\"yee\"");
     defer node.deinit(t.allocator);
     try expectEqualNodes(Node{ .string = "yee" }, node);
 }
 
-test "Read string with escaped character" {
+test "Parse string with escaped character" {
     const parser = Parser.init(t.allocator);
     var node = parser.parse("\"\\\"yee\"");
     defer node.deinit(t.allocator);
     try expectEqualNodes(Node{ .string = "\"yee" }, node);
 }
 
-test "Read array of strings" {
+test "Parse array of strings" {
     const parser = Parser.init(t.allocator);
     var node = parser.parse("[ \"a\" , \"b\" ]");
     defer node.deinit(t.allocator);
     try expectEqualNodes(Node{ .array = &[_]Node{ Node{ .string = "a" }, Node{ .string = "b" } } }, node);
 }
 
-test "Read booleans" {
+test "Parse booleans" {
     const parser = Parser.init(t.allocator);
     const a = parser.parse("true");
     const b = parser.parse("false");
@@ -103,13 +110,13 @@ test "Read booleans" {
     try expectEqualNodes(Node{ .boolean = false }, b);
 }
 
-test "Read null" {
+test "Parse null" {
     const parser = Parser.init(t.allocator);
     const a = parser.parse("null");
     try expectEqualNodes(Node.null_, a);
 }
 
-test "Read object with single key" {
+test "Parse object with single key" {
     const parser = Parser.init(t.allocator);
     var node = parser.parse("{ \"a\": null }");
     defer node.deinit(t.allocator);
@@ -119,7 +126,7 @@ test "Read object with single key" {
     try expectEqualNodes(Node{ .object = map }, node);
 }
 
-test "Read object with multiple keys" {
+test "Parse object with multiple keys" {
     const parser = Parser.init(t.allocator);
     var node = parser.parse("{ \"a\": null, \"b\": [null, null] }");
     defer node.deinit(t.allocator);
@@ -130,7 +137,7 @@ test "Read object with multiple keys" {
     try expectEqualNodes(Node{ .object = map }, node);
 }
 
-test "Read object with nested stuff" {
+test "Parse object with nested stuff" {
     const parser = Parser.init(t.allocator);
     var node = parser.parse("{ \"a\": { \"b\": [] } }");
     defer node.deinit(t.allocator);
@@ -143,4 +150,56 @@ test "Read object with nested stuff" {
     first.put("a", Node{ .object = second }) catch unreachable;
 
     try expectEqualNodes(Node{ .object = first }, node);
+}
+
+test "Parse float" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("123.5");
+    defer node.deinit(t.allocator);
+    try expectEqualNodes(Node{ .number = 123.5 }, node);
+}
+
+test "Parse int" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("456");
+    defer node.deinit(t.allocator);
+    try expectEqualNodes(Node{ .number = 456 }, node);
+}
+
+test "Parse large thing" {
+    const str =
+        \\    {
+        \\        "firstName": "John",
+        \\        "lastName": "Smith",
+        \\        "isAlive": true,
+        \\        "age": 27,
+        \\        "address": {
+        \\          "streetAddress": "21 2nd Street",
+        \\          "city": "New York",
+        \\          "state": "NY",
+        \\          "postalCode": "10021-3100"
+        \\        },
+        \\        "phoneNumbers": [
+        \\          {
+        \\            "type": "home",
+        \\            "number": "212 555-1234"
+        \\          },
+        \\          {
+        \\            "type": "office",
+        \\            "number": "646 555-4567"
+        \\          }
+        \\        ],
+        \\        "children": [],
+        \\        "spouse": null
+        \\    }
+    ;
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse(str);
+    defer node.deinit(t.allocator);
+
+    println(node);
+
+    try t.expect(true);
+
+    // println(node);
 }

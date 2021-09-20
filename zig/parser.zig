@@ -5,6 +5,10 @@ fn isWhitespace(chr: u8) bool {
     return chr == ' ' or chr == '\t' or chr == '\n' or chr == '\r';
 }
 
+fn isNumberLike(chr: u8) bool {
+    return chr == '0' or chr == '1' or chr == '2' or chr == '3' or chr == '4' or chr == '5' or chr == '6' or chr == '7' or chr == '8' or chr == '9' or chr == '.';
+}
+
 const State = struct {
     allocator: *std.mem.Allocator,
     index: usize,
@@ -12,8 +16,12 @@ const State = struct {
 
     const Self = @This();
 
-    pub fn readNode(self: *Self) Node {
+    fn readNode(self: *Self) Node {
         self.skipWhitespace();
+
+        if (isNumberLike(self.peek())) {
+            return Node{ .number = self.readNumber() };
+        }
 
         return switch (self.peek()) {
             '"' => Node{ .string = self.readString() },
@@ -123,6 +131,17 @@ const State = struct {
         self.moveNext();
 
         return map;
+    }
+
+    fn readNumber(self: *Self) f64 {
+        var buffer: [64]u8 = undefined;
+        var len: usize = 0;
+        while (self.index < self.buffer.len and isNumberLike(self.peek())) {
+            buffer[len] = self.peek();
+            self.moveNext();
+            len += 1;
+        }
+        return std.fmt.parseFloat(f64, buffer[0..len]) catch unreachable;
     }
 };
 
