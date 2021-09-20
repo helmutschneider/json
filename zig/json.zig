@@ -42,6 +42,20 @@ fn expectEqualNodes(expected: Node, actual: Node) E!void {
                 else => return E.TestUnexpectedError,
             }
         },
+        .object => |a| {
+            var iter = a.iterator();
+
+            switch (actual) {
+                .object => |b| {
+                    while (iter.next()) |kv| {
+                        const found = b.get(kv.key_ptr.*);
+                        t.expect(found != null) catch return E.TestUnexpectedError;
+                        try expectEqualNodes(kv.value_ptr.*, found.?);
+                    }
+                },
+                else => return E.TestUnexpectedError,
+            }
+        },
         .boolean => |a| {
             switch (actual) {
                 .boolean => |b| {
@@ -62,21 +76,21 @@ fn expectEqualNodes(expected: Node, actual: Node) E!void {
 
 test "Read string" {
     const parser = Parser.init(t.allocator);
-    const node = parser.parse("\"yee\"");
+    var node = parser.parse("\"yee\"");
     defer node.deinit(t.allocator);
     try expectEqualNodes(Node{ .string = "yee" }, node);
 }
 
 test "Read string with escaped character" {
     const parser = Parser.init(t.allocator);
-    const node = parser.parse("\"\\\"yee\"");
+    var node = parser.parse("\"\\\"yee\"");
     defer node.deinit(t.allocator);
     try expectEqualNodes(Node{ .string = "\"yee" }, node);
 }
 
 test "Read array of strings" {
     const parser = Parser.init(t.allocator);
-    const node = parser.parse("[ \"a\" , \"b\" ]");
+    var node = parser.parse("[ \"a\" , \"b\" ]");
     defer node.deinit(t.allocator);
     try expectEqualNodes(Node{ .array = &[_]Node{ Node{ .string = "a" }, Node{ .string = "b" } } }, node);
 }
@@ -93,4 +107,40 @@ test "Read null" {
     const parser = Parser.init(t.allocator);
     const a = parser.parse("null");
     try expectEqualNodes(Node.null_, a);
+}
+
+test "Read object with single key" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("{ \"a\": null }");
+    defer node.deinit(t.allocator);
+    var map = std.StringHashMap(Node).init(t.allocator);
+    map.put("a", Node.null_) catch unreachable;
+    defer map.deinit();
+    try expectEqualNodes(Node{ .object = map }, node);
+}
+
+test "Read object with multiple keys" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("{ \"a\": null, \"b\": [null, null] }");
+    defer node.deinit(t.allocator);
+    var map = std.StringHashMap(Node).init(t.allocator);
+    map.put("a", Node.null_) catch unreachable;
+    map.put("b", Node{ .array = &[_]Node{ Node.null_, Node.null_ } }) catch unreachable;
+    defer map.deinit();
+    try expectEqualNodes(Node{ .object = map }, node);
+}
+
+test "Read object with nested stuff" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("{ \"a\": { \"b\": [] } }");
+    defer node.deinit(t.allocator);
+    var second = std.StringHashMap(Node).init(t.allocator);
+    defer second.deinit();
+    second.put("b", Node{ .array = &.{} }) catch unreachable;
+
+    var first = std.StringHashMap(Node).init(t.allocator);
+    defer first.deinit();
+    first.put("a", Node{ .object = second }) catch unreachable;
+
+    try expectEqualNodes(Node{ .object = first }, node);
 }

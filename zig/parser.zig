@@ -18,6 +18,7 @@ const State = struct {
         return switch (self.peek()) {
             '"' => Node{ .string = self.readString() },
             '[' => Node{ .array = self.readArray() },
+            '{' => Node{ .object = self.readObject() },
             't' => {
                 self.index += 4;
                 return Node{ .boolean = true };
@@ -97,6 +98,31 @@ const State = struct {
         self.moveNext();
 
         return buffer.toOwnedSlice();
+    }
+
+    fn readObject(self: *Self) std.StringHashMap(Node) {
+        self.expect('{');
+        self.moveNext();
+
+        var map = std.StringHashMap(Node).init(self.allocator);
+
+        while (self.peek() != '}') {
+            self.skipWhitespace();
+            const key = self.readString();
+            self.skipWhitespace();
+            self.expect(':');
+            self.moveNext();
+            const value = self.readNode();
+            map.put(key, value) catch unreachable;
+            self.skipWhitespace();
+
+            if (self.peek() == ',') {
+                self.moveNext();
+            }
+        }
+        self.moveNext();
+
+        return map;
     }
 };
 
