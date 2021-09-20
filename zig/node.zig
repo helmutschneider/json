@@ -1,6 +1,15 @@
 const std = @import("std");
 
-pub const Node = union(enum) {
+pub const NodeKind = enum {
+    string,
+    number,
+    boolean,
+    null_,
+    array,
+    object,
+};
+
+pub const Node = union(NodeKind) {
     string: []const u8,
     number: f64,
     boolean: bool,
@@ -30,5 +39,58 @@ pub const Node = union(enum) {
             },
             else => {},
         }
+    }
+
+    pub fn eql(self: Node, other: Node) bool {
+        return switch (self) {
+            .string => |a| switch (other) {
+                .string => |b| std.mem.eql(u8, a, b),
+                else => false,
+            },
+            .array => |a| switch (other) {
+                .array => |b| {
+                    if (a.len != b.len) {
+                        return false;
+                    }
+                    var i: usize = 0;
+                    while (i < a.len) {
+                        if (!a[i].eql(b[i])) {
+                            return false;
+                        }
+                        i += 1;
+                    }
+                    return true;
+                },
+                else => false,
+            },
+            .object => |a| {
+                var iter = a.iterator();
+
+                return switch (other) {
+                    .object => |b| {
+                        while (iter.next()) |kv| {
+                            const found = b.get(kv.key_ptr.*);
+                            if (found == null or !kv.value_ptr.eql(found.?)) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    },
+                    else => false,
+                };
+            },
+            .boolean => |a| switch (other) {
+                .boolean => |b| a == b,
+                else => false,
+            },
+            .null_ => |a| switch (other) {
+                .null_ => true,
+                else => false,
+            },
+            .number => |a| switch (other) {
+                .number => |b| a == b,
+                else => return false,
+            },
+        };
     }
 };

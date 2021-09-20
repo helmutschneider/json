@@ -36,4 +36,4 @@ jobs:
         run: make tests
       - name: "Test: Zig"
         working-directory: ./zig
-        run: zig test json.zig
+        run: zig test parser.zig

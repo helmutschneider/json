@@ -1,5 +1,8 @@
 const std = @import("std");
-const Node = @import("node.zig").Node;
+const n = @import("node.zig");
+const Node = n.Node;
+const NodeKind = n.NodeKind;
+const t = std.testing;
 
 fn isWhitespace(chr: u8) bool {
     return chr == ' ' or chr == '\t' or chr == '\n' or chr == '\r';
@@ -163,3 +166,132 @@ pub const Parser = struct {
         return state.readNode();
     }
 };
+
+const E = error{
+    TestUnexpectedError,
+};
+
+fn expectEqualNodes(expected: Node, actual: Node) !void {
+    if (!expected.eql(actual)) {
+        return E.TestUnexpectedError;
+    }
+}
+
+test "Parse string" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("\"yee\"");
+    defer node.deinit(t.allocator);
+    try expectEqualNodes(Node{ .string = "yee" }, node);
+}
+
+test "Parse string with escaped character" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("\"\\\"yee\"");
+    defer node.deinit(t.allocator);
+    try expectEqualNodes(Node{ .string = "\"yee" }, node);
+}
+
+test "Parse array of strings" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("[ \"a\" , \"b\" ]");
+    defer node.deinit(t.allocator);
+    try expectEqualNodes(Node{ .array = &[_]Node{ Node{ .string = "a" }, Node{ .string = "b" } } }, node);
+}
+
+test "Parse booleans" {
+    const parser = Parser.init(t.allocator);
+    const a = parser.parse("true");
+    const b = parser.parse("false");
+    try expectEqualNodes(Node{ .boolean = true }, a);
+    try expectEqualNodes(Node{ .boolean = false }, b);
+}
+
+test "Parse null" {
+    const parser = Parser.init(t.allocator);
+    const a = parser.parse("null");
+    try expectEqualNodes(Node.null_, a);
+}
+
+test "Parse object with single key" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("{ \"a\": null }");
+    defer node.deinit(t.allocator);
+    var map = std.StringHashMap(Node).init(t.allocator);
+    map.put("a", Node.null_) catch unreachable;
+    defer map.deinit();
+    try expectEqualNodes(Node{ .object = map }, node);
+}
+
+test "Parse object with multiple keys" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("{ \"a\": null, \"b\": [null, null] }");
+    defer node.deinit(t.allocator);
+    var map = std.StringHashMap(Node).init(t.allocator);
+    map.put("a", Node.null_) catch unreachable;
+    map.put("b", Node{ .array = &[_]Node{ Node.null_, Node.null_ } }) catch unreachable;
+    defer map.deinit();
+    try expectEqualNodes(Node{ .object = map }, node);
+}
+
+test "Parse object with nested stuff" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("{ \"a\": { \"b\": [] } }");
+    defer node.deinit(t.allocator);
+    var second = std.StringHashMap(Node).init(t.allocator);
+    defer second.deinit();
+    second.put("b", Node{ .array = &.{} }) catch unreachable;
+
+    var first = std.StringHashMap(Node).init(t.allocator);
+    defer first.deinit();
+    first.put("a", Node{ .object = second }) catch unreachable;
+
+    try expectEqualNodes(Node{ .object = first }, node);
+}
+
+test "Parse float" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("123.5");
+    defer node.deinit(t.allocator);
+    try expectEqualNodes(Node{ .number = 123.5 }, node);
+}
+
+test "Parse int" {
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse("456");
+    defer node.deinit(t.allocator);
+    try expectEqualNodes(Node{ .number = 456 }, node);
+}
+
+test "Parse large thing" {
+    const str =
+        \\    {
+        \\        "firstName": "John",
+        \\        "lastName": "Smith",
+        \\        "isAlive": true,
+        \\        "age": 27,
+        \\        "address": {
+        \\          "streetAddress": "21 2nd Street",
+        \\          "city": "New York",
+        \\          "state": "NY",
+        \\          "postalCode": "10021-3100"
+        \\        },
+        \\        "phoneNumbers": [
+        \\          {
+        \\            "type": "home",
+        \\            "number": "212 555-1234"
+        \\          },
+        \\          {
+        \\            "type": "office",
+        \\            "number": "646 555-4567"
+        \\          }
+        \\        ],
+        \\        "children": [],
+        \\        "spouse": null
+        \\    }
+    ;
+    const parser = Parser.init(t.allocator);
+    var node = parser.parse(str);
+    defer node.deinit(t.allocator);
+
+    try t.expectEqual(NodeKind.object, node);
+}
