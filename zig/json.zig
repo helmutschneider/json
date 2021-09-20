@@ -63,18 +63,21 @@ fn expectEqualNodes(expected: Node, actual: Node) E!void {
 test "Read string" {
     const parser = Parser.init(t.allocator);
     const node = parser.parse("\"yee\"");
+    defer node.deinit(t.allocator);
     try expectEqualNodes(Node{ .string = "yee" }, node);
 }
 
 test "Read string with escaped character" {
     const parser = Parser.init(t.allocator);
     const node = parser.parse("\"\\\"yee\"");
+    defer node.deinit(t.allocator);
     try expectEqualNodes(Node{ .string = "\"yee" }, node);
 }
 
 test "Read array of strings" {
     const parser = Parser.init(t.allocator);
     const node = parser.parse("[ \"a\" , \"b\" ]");
+    defer node.deinit(t.allocator);
     try expectEqualNodes(Node{ .array = &[_]Node{ Node{ .string = "a" }, Node{ .string = "b" } } }, node);
 }
 

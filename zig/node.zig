@@ -7,4 +7,17 @@ pub const Node = union(enum) {
     null_: void,
     array: []const Node,
     object: std.StringHashMap(Node),
+
+    pub fn deinit(self: Node, allocator: *std.mem.Allocator) void {
+        switch (self) {
+            .string => |str| allocator.free(str),
+            .array => |nodes| {
+                for (nodes) |child| {
+                    child.deinit(allocator);
+                }
+                allocator.free(nodes);
+            },
+            else => {},
+        }
+    }
 };
