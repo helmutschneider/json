@@ -18,6 +18,7 @@ Thumbs.db
 /_build
 /pascal/build
 /zig/zig-cache
+/ada/build
 
 .env
 
