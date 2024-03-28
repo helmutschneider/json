@@ -12,9 +12,16 @@ procedure Main is
       Actual : JsonNode;
       Expected : JsonNode;
    begin
-      Actual := Json.Parse("null");
-      Expected := (Kind => JsonNull);
-      Assert(Actual = Expected);
+      begin
+         Actual := Json.Parse("""cowabunga!""");
+         Expected := (Kind => JsonStr, Str => To_Unbounded_String("cowabunga!"));
+         Assert(Equal(Expected, Actual));
+      end;
+      begin
+         Actual := Json.Parse("""esc\\aped!""");
+         Expected := (Kind => JsonStr, Str => To_Unbounded_String("esc\aped!"));
+         Assert(Equal(Expected, Actual));
+      end;
    end;
 
    MY_JSON_STR : String := "{ ""yee"": [1, 2, 3] }";
