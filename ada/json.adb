@@ -39,10 +39,10 @@ package body Json is
         case Left.Kind is
             when JsonNull =>
                 return true;
-            when JsonStr =>
-                return Left.Str = Right.Str;
-            when JsonBool =>
+            when JsonBoolean =>
                 return Left.Bool = Right.Bool;
+            when JsonString =>
+                return Left.Str = Right.Str;
             when JsonArray =>
                 if Left.Items.Length /= Right.Items.Length then
                     return false;
@@ -136,7 +136,7 @@ package body Json is
         Assert(Ch = '"');
         Parser_Advance(P);
 
-        return (Kind => JsonStr, Str => Res);
+        return (Kind => JsonString, Str => Res);
     end;
 
     function Parser_Parse_Boolean(P : in out Parser) return JsonNode is
@@ -147,10 +147,10 @@ package body Json is
 
         if Ch = 't' then
             Parser_Advance(P, 4);
-            return (Kind => JsonBool, Bool => true);
+            return (Kind => JsonBoolean, Bool => true);
         elsif Ch = 'f' then
             Parser_Advance(P, 5);
-            return (Kind => JsonBool, Bool => false);
+            return (Kind => JsonBoolean, Bool => false);
         end if;
 
         Assert(false);

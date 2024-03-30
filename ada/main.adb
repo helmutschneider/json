@@ -24,23 +24,23 @@ procedure Main is
             Value    => To_Unbounded_String ("n")),
          3 =>
            (Expected =>
-              (Kind => JsonStr, Str => To_Unbounded_String ("cowabunga!")),
+              (Kind => JsonString, Str => To_Unbounded_String ("cowabunga!")),
             Value    => To_Unbounded_String ("""cowabunga!""")),
          4 =>
            (Expected =>
-              (Kind => JsonStr, Str => To_Unbounded_String ("cowa\bunga!")),
+              (Kind => JsonString, Str => To_Unbounded_String ("cowa\bunga!")),
             Value    => To_Unbounded_String ("""cowa\\bunga!""")),
          5 =>
-           (Expected => (Kind => JsonBool, Bool => True),
+           (Expected => (Kind => JsonBoolean, Bool => True),
             Value    => To_Unbounded_String ("true")),
          6 =>
-           (Expected => (Kind => JsonBool, Bool => True),
+           (Expected => (Kind => JsonBoolean, Bool => True),
             Value    => To_Unbounded_String ("t")),
          7 =>
-           (Expected => (Kind => JsonBool, Bool => False),
+           (Expected => (Kind => JsonBoolean, Bool => False),
             Value    => To_Unbounded_String ("false")),
          8 =>
-           (Expected => (Kind => JsonBool, Bool => False),
+           (Expected => (Kind => JsonBoolean, Bool => False),
             Value    => To_Unbounded_String ("f")));
    begin
       for K in 1 .. Cases'Length loop
@@ -55,17 +55,17 @@ procedure Main is
          Items    : JsonVectors.Vector;
          Node     : JsonNodeAccess;
       begin
-         Node := new JsonNode'(Kind => JsonBool, Bool => True);
+         Node := new JsonNode'(Kind => JsonBoolean, Bool => True);
          Items.Append (Node);
          Node := new JsonNode'(Kind => JsonNull);
          Items.Append (Node);
-         Node := new JsonNode'(Kind => JsonBool, Bool => False);
+         Node := new JsonNode'(Kind => JsonBoolean, Bool => False);
          Items.Append (Node);
          Expected := (Kind => JsonArray, Items => Items);
          Actual   := Json.Parse ("[true, null, false]");
          Assert(Equal(Expected, Actual));
-         Put_Line("Ok!");
       end;
+      Put_Line("Ok!");
    end Run_Tests;
 
 begin

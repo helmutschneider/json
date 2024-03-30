@@ -12,15 +12,15 @@ package Json is
 
     subtype F32 is Float;
     subtype F64 is Long_Float;
-    type JsonKind is (JsonNull, JsonStr, JsonBool, JsonArray);
+    type JsonKind is (JsonNull, JsonBoolean, JsonString, JsonArray);
     type JsonNode (Kind : JsonKind := JsonNull) is record
         case Kind is
             when JsonNull =>
                 null;
-            when JsonStr =>
-                Str : Unbounded_String;
-            when JsonBool =>
+            when JsonBoolean =>
                 Bool : Boolean;
+            when JsonString =>
+                Str : Unbounded_String;
             when JsonArray =>
                 Items : JsonVectors.Vector;
         end case;
