@@ -1,7 +1,5 @@
-with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Strings.Maps.Constants; use Ada.Strings.Maps.Constants;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Ada.Assertions; use Ada.Assertions;
 with Ada.Containers; use Ada.Containers;
 
 package body Json is
@@ -32,6 +30,7 @@ package body Json is
     end;
 
     function Equal(Left : JsonNode; Right : JsonNode) return Boolean is
+        use Json.JsonMaps;
     begin
         if Left.Kind /= Right.Kind then
             return False;
@@ -46,17 +45,37 @@ package body Json is
             when JsonString =>
                 return Left.Str = Right.Str;
             when JsonArray =>
-                if Left.Items.Length /= Right.Items.Length then
+                if Left.Vec.Length /= Right.Vec.Length then
                     return false;
                 end if;
-                for K in Left.Items.First_Index .. Left.Items.Last_Index loop
+                for K in Left.Vec.First_Index .. Left.Vec.Last_Index loop
                     declare
                         A : JsonNodeAccess;
                         B : JsonNodeAccess;
                     begin
-                        A := Left.Items(K);
-                        B := Right.Items(K);
+                        A := Left.Vec(K);
+                        B := Right.Vec(K);
 
+                        if not Equal(A.all, B.all) then
+                            return false;
+                        end if;
+                    end;
+                end loop;
+                return true;
+            when JsonObject =>
+                if Left.Map.Length /= Right.Map.Length then
+                    return false;
+                end if;
+                for C in Left.Map.Iterate loop
+                    declare
+                        A : JsonNodeAccess;
+                        B : JsonNodeAccess;
+                    begin
+                        A := Left.Map(Key(C));
+                        if not Right.Map.Contains(Key(C)) then
+                            return false;
+                         end if;
+                        B := Right.Map(Key(C));
                         if not Equal(A.all, B.all) then
                             return false;
                         end if;
@@ -71,20 +90,46 @@ package body Json is
         return Char_At(P.Data, P.Index + Offset);
     end;
 
+    function Parser_Is_EOF(P : in Parser; Offset : Natural) return Boolean is
+    begin
+        return (P.Index + Offset) > P.Length;
+    end;
+
+    function Parser_Is_EOF(P : in Parser) return Boolean is
+    begin
+        return Parser_Is_EOF(P, 0);
+    end;
+
     function Parser_Token(P : Parser) return Character is
     begin
         return Parser_Peek(P, 0);
     end;
 
-    function Parser_Is_EOF(P : in Parser) return Boolean is
+    procedure Parser_Parse_Error(P : Parser; Message : String) is
+        Ch : Character;
     begin
-        return P.Index > P.Length;
+        Ch := Parser_Token(P);
+        raise JsonParseError with "Parse error at '" & Ch & "', index" & P.Index'Image & ". " & Message;
     end;
 
-    procedure Parser_Advance(P : in out Parser; C : Positive) is
+    procedure Parser_Expect(P : Parser; Expected : String) is
+        S : Unbounded_String;
+    begin
+        for K in 1 .. Expected'Length loop
+            if Parser_Is_EOF(P, K - 1) then
+                exit;
+            end if;
+            S := S & Parser_Peek(P, K - 1);
+        end loop;
+        if To_String(S) /= Expected then
+            Parser_Parse_Error(P, "Expected '" & Expected & "', found '" & To_String(S) & "'.");
+        end if;
+    end;
+
+    procedure Parser_Advance(P : in out Parser; Offset : Positive) is
     begin
         if not Parser_Is_EOF(P) then
-            P.Index := P.Index + C;
+            P.Index := P.Index + Offset;
         end if;
     end;
 
@@ -94,10 +139,8 @@ package body Json is
     end;
 
     function Parser_Parser_Null(P : in out Parser) return JsonNode is
-        Ch : Character;
     begin
-        Ch := Parser_Token(P);
-        Assert(Ch = 'n');
+        Parser_Expect(P, "null");
         Parser_Advance(P, 4);
         return (Kind => JsonNull);
     end;
@@ -114,8 +157,7 @@ package body Json is
         Is_Reading_Escaped_Char : Boolean := false;
         Res : Unbounded_String;
     begin
-        Ch := Parser_Token(P);
-        Assert(Ch = '"');
+        Parser_Expect(P, """");
         Parser_Advance(P);
 
         while not Parser_Is_EOF(P) loop
@@ -135,7 +177,7 @@ package body Json is
             Parser_Advance(P);
         end loop;
 
-        Assert(Ch = '"');
+        Parser_Expect(P, """");
         Parser_Advance(P);
 
         return (Kind => JsonString, Str => Res);
@@ -145,17 +187,18 @@ package body Json is
         Ch : Character;
     begin
         Ch := Parser_Token(P);
-        Assert(Ch = 't' or Ch = 'f');
 
         if Ch = 't' then
+            Parser_Expect(P, "true");
             Parser_Advance(P, 4);
             return (Kind => JsonBoolean, Bool => true);
         elsif Ch = 'f' then
+            Parser_Expect(P, "false");
             Parser_Advance(P, 5);
             return (Kind => JsonBoolean, Bool => false);
         end if;
 
-        Assert(false);
+        Parser_Parse_Error(P, "Expected 'true' or 'false'.");
         return (Kind => JsonNull);
     end;
 
@@ -183,16 +226,15 @@ package body Json is
     function Parser_Parse_Array(P : in out Parser) return JsonNode is
         Ch : Character;
         Node : JsonNodeAccess;
-        Items : JsonVectors.Vector;
-        Res : JsonNode;
+        Vec : JsonVectors.Vector;
     begin
-        Ch := Parser_Token(P);
-        Assert(Ch = '[');
+        Parser_Expect(P, "[");
         Parser_Advance(P);
+        Parser_Skip_Whitespace(P);
 
-        while not Parser_Is_EOF(P) loop
+        while not Parser_Is_EOF(P) and Parser_Token(P) /= ']' loop
             Node := new JsonNode'(Parser_Parse_Next(P));
-            Items.Append(Node);
+            Vec.Append(Node);
             Parser_Skip_Whitespace(P);
             Ch := Parser_Token(P);
             if Ch = ',' then
@@ -202,17 +244,44 @@ package body Json is
             end if;
         end loop;
 
-        Ch := Parser_Token(P);
-        Assert(Ch = ']');
+        Parser_Expect(P, "]");
         Parser_Advance(P);
-        Res := (Kind => JsonArray, Items => Items);
-        return Res;
+        return (Kind => JsonArray, Vec => Vec);
     end;
 
-    function Parser_Parse_Error(P : Parser) return JsonNode is
+    function Parser_Parse_Object(P : in out Parser) return JsonNode is
+        Ch : Character;
+        Key : Unbounded_String;
+        Value : JsonNodeAccess;
+        Map : JsonMaps.Map;
     begin
-        raise JsonParseError with "Parse error at" & P.Index'Image;
-        return (Kind => JsonNull);
+        Parser_Expect(P, "{");
+        Parser_Advance(P);
+        Parser_Skip_Whitespace(P);
+
+        while not Parser_Is_EOF(P) and Parser_Token(P) /= '}' loop
+            Parser_Skip_Whitespace(P);
+            Key := Parser_Parse_String(P).Str;
+            Parser_Skip_Whitespace(P);
+            Parser_Expect(P, ":");
+            Parser_Advance(P);
+            Value := new JsonNode'(Parser_Parse_Next(P));
+            Map.Include(To_String(Key), Value);
+            Parser_Skip_Whitespace(P);
+            Ch := Parser_Token(P);
+            if Ch = ',' then
+                Parser_Advance(P);
+            elsif Ch = '}' then
+                null;
+            else
+                Parser_Parse_Error(P, "Expected ',' or '}'.");
+            end if;
+        end loop;
+
+        Parser_Expect(P, "}");
+        Parser_Advance(P);
+
+        return (Kind => JsonObject, Map => Map);
     end;
 
     function Parser_Parse_Next(P : in out Parser) return JsonNode is
@@ -221,14 +290,25 @@ package body Json is
     begin
         Parser_Skip_Whitespace(P);
         Ch := Parser_Token(P);
-        Result := (case Ch is
-            when 'n' => Parser_Parser_Null(P),
-            when 't' | 'f' => Parser_Parse_Boolean(P),
-            when '0' .. '9' => Parser_Parse_Number(P),
-            when '"' => Parser_Parse_String(P),
-            when '[' => Parser_Parse_Array(P),
-            when others => Parser_Parse_Error(P));
-        return Result;
+        case Ch is
+            when 'n' =>
+                return Parser_Parser_Null(P);
+            when 't' | 'f' =>
+                return Parser_Parse_Boolean(P);
+            when '0' .. '9' =>
+                return Parser_Parse_Number(P);
+            when '"' =>
+                return Parser_Parse_String(P);
+            when '[' =>
+                return Parser_Parse_Array(P);
+            when '{' =>
+                return Parser_Parse_Object(P);
+            when others =>
+                null;
+        end case;
+
+        Parser_Parse_Error(P, "Expected a JSON node.");
+        return (Kind => JsonNull);
     end;
 
     function Parse(S : String) return JsonNode is

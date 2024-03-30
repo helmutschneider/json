@@ -20,56 +20,104 @@ procedure Main is
            (Expected => (Kind => JsonNull),
             Value    => To_Unbounded_String ("null")),
          2 =>
-           (Expected => (Kind => JsonNull),
-            Value    => To_Unbounded_String ("n")),
-         3 =>
            (Expected =>
               (Kind => JsonString, Str => To_Unbounded_String ("cowabunga!")),
             Value    => To_Unbounded_String ("""cowabunga!""")),
-         4 =>
+         3 =>
            (Expected =>
               (Kind => JsonString, Str => To_Unbounded_String ("cowa\bunga!")),
             Value    => To_Unbounded_String ("""cowa\\bunga!""")),
-         5 =>
+         4 =>
            (Expected => (Kind => JsonBoolean, Bool => True),
             Value    => To_Unbounded_String ("true")),
-         6 =>
-           (Expected => (Kind => JsonBoolean, Bool => True),
-            Value    => To_Unbounded_String ("t")),
-         7 =>
+         5 =>
            (Expected => (Kind => JsonBoolean, Bool => False),
             Value    => To_Unbounded_String ("false")),
-         8 =>
-           (Expected => (Kind => JsonBoolean, Bool => False),
-            Value    => To_Unbounded_String ("f")),
-         9 =>
+         6 =>
            (Expected => (Kind => JsonNumber, Num => 1.5),
-            Value    => To_Unbounded_String ("1.5")));
+            Value    => To_Unbounded_String ("1.5")),
+         7 =>
+           (Expected => (Kind => JsonNumber, Num => 420.0),
+            Value    => To_Unbounded_String ("  420  ")));
    begin
       for K in 1 .. Cases'Length loop
          Actual := Json.Parse (Cases (K).Value);
          Assert (Equal (Cases (K).Expected, Actual));
       end loop;
 
-      -- array tests
+      -- array with stuff
       declare
          Actual   : JsonNode;
          Expected : JsonNode;
-         Items    : JsonVectors.Vector;
+         Vec    : JsonVectors.Vector;
          Node     : JsonNodeAccess;
       begin
          Node := new JsonNode'(Kind => JsonBoolean, Bool => True);
-         Items.Append (Node);
+         Vec.Append (Node);
          Node := new JsonNode'(Kind => JsonNull);
-         Items.Append (Node);
+         Vec.Append (Node);
          Node := new JsonNode'(Kind => JsonBoolean, Bool => False);
-         Items.Append (Node);
+         Vec.Append (Node);
          Node := new JsonNode'(Kind => JsonNumber, Num => 3.2);
-         Items.Append (Node);
-         Expected := (Kind => JsonArray, Items => Items);
+         Vec.Append (Node);
+         Expected := (Kind => JsonArray, Vec => Vec);
          Actual   := Json.Parse ("[true, null, false, 3.2]");
          Assert (Equal (Expected, Actual));
       end;
+
+      -- empty array
+      declare
+         Actual   : JsonNode;
+         Expected : JsonNode;
+         Vec    : JsonVectors.Vector;
+      begin
+         Expected := (Kind => JsonArray, Vec => Vec);
+         Actual   := Json.Parse ("  [ ]  ");
+         Assert (Equal (Expected, Actual));
+      end;
+
+      -- map with stuff
+      declare
+         Actual   : JsonNode;
+         Expected : JsonNode;
+         Map    : JsonMaps.Map;
+         Node     : JsonNodeAccess;
+      begin
+         Node := new JsonNode'(Kind => JsonBoolean, Bool => True);
+         Map.Include("yee", Node);
+         Node := new JsonNode'(Kind => JsonNumber, Num => 42069.0);
+         Map.Include("boi", Node);
+         Expected := (Kind => JsonObject, Map => Map);
+         Actual   := Json.Parse ("{ ""boi"" : 42069, ""yee"" : true }");
+         Assert (Equal (Expected, Actual));
+      end;
+
+      -- empty map
+      declare
+         Actual   : JsonNode;
+         Expected : JsonNode;
+         Map    : JsonMaps.Map;
+      begin
+         Expected := (Kind => JsonObject, Map => Map);
+         Actual   := Json.Parse ("{}");
+         Assert (Equal (Expected, Actual));
+      end;
+
+      -- random parser tests
+      declare
+         S : constant array(Positive range<>) of Unbounded_String := (
+            1 => To_Unbounded_String("{ ""bunga"": [1, 2, 3], ""boi"": { ""x"": 5 } }"),
+            2 => To_Unbounded_String("  [ 420, {}, false     ]                  "),
+            3 => To_Unbounded_String("[[[420, 69]]]"),
+            4 => To_Unbounded_String("""hello!""")
+         );
+         Node : JsonNode;
+      begin
+         for X of S loop
+            Node := Json.Parse(X);
+         end loop;
+      end;
+
       Put_Line ("Ok!");
    end Run_Tests;
 
