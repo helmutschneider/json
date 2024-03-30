@@ -11,22 +11,52 @@ package body Json is
 
     JsonParseError : exception;
 
-    function Length(S : Unbounded_String) return Natural is
-    begin
-       return Ada.Strings.Unbounded.Count(S, ISO_646_Set);
-    end;
-
-    function Char_At(S : Unbounded_String; I : Positive) return Character is
-    begin
-        return Ada.Strings.Unbounded.Element(S, I);
-    end;
-
     function Is_Whitespace(Ch : Character) return Boolean is
     begin
         return Ch = ' '
             or Ch = ASCII.LF  -- \n
             or Ch = ASCII.CR  -- \r
             or Ch = ASCII.HT; -- \t
+    end;
+
+    function To_String(Node : JsonNode; Depth : Natural) return String is
+        Indent : Unbounded_String;
+        S : Unbounded_String;
+        Tab : constant String := "  ";
+        use Json.JsonMaps;
+    begin
+        for K in 1 .. Depth loop
+            Indent := Indent & Tab;
+        end loop;
+        S := S & Indent & Node.Kind'Image & ":" & ASCII.LF;
+        Indent := Indent & Tab;
+        case Node.Kind is
+            when JsonNull =>
+                S := S & Indent & "null";
+            when JsonBoolean =>
+                S := S & Indent & Node.Bool'Image;
+            when JsonNumber =>
+                S := S & Indent & Node.Num'Image;
+            when JsonString =>
+                S := S & Indent & """" & Node.Str & """";
+            when JsonArray =>
+                for Child of Node.Vec loop
+                    S := S & To_String(Child.all, Depth + 1) & ASCII.LF;
+                end loop;
+            when JsonObject =>
+                for C in Node.Map.Iterate loop
+                    S := S & Indent & """" & Key(C) & """:" & ASCII.LF;
+                    S := S & To_String(Node.Map(Key(C)).all, Depth + 2) & ASCII.LF;
+                end loop;
+            when others =>
+                null;
+        end case;
+        return To_String(S);
+    end;
+
+    function To_String(Node : JsonNode) return String is
+    begin
+        return To_String(Node, 0);
     end;
 
     function Equal(Left : JsonNode; Right : JsonNode) return Boolean is
@@ -87,7 +117,7 @@ package body Json is
 
     function Parser_Peek(P : Parser; Offset : Natural) return Character is
     begin
-        return Char_At(P.Data, P.Index + Offset);
+        return Ada.Strings.Unbounded.Element(P.Data, P.Index + Offset);
     end;
 
     function Parser_Is_EOF(P : in Parser; Offset : Natural) return Boolean is
@@ -311,14 +341,15 @@ package body Json is
         return (Kind => JsonNull);
     end;
 
-    function Parse(S : String) return JsonNode is
+    function Parse(Str : String) return JsonNode is
     begin
-        return Parse(To_Unbounded_String(S));
+        return Parse(To_Unbounded_String(Str));
     end;
 
-    function Parse(S : Unbounded_String) return JsonNode is
-        P : Parser := (S, Length(S), 1);
+    function Parse(Str : Unbounded_String) return JsonNode is
+        P : Parser;
     begin
+        P := (Str, Length(Str), 1);
         return Parser_Parse_Next(P);
     end;
 end;

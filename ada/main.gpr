@@ -1,3 +1,3 @@
 project Main is
-    for Source_Files use ("main.adb", "json.ads");
+    for Source_Files use ("main.adb", "json.ads", "json.adb", "tests.ads", "tests.adb");
 end Main;

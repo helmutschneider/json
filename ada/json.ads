@@ -35,7 +35,8 @@ package Json is
         end case;
     end record;
    
-   function Parse(S : String) return JsonNode;
-   function Parse(S : Unbounded_String) return JsonNode;
+   function Parse(Str : String) return JsonNode;
+   function Parse(Str : Unbounded_String) return JsonNode;
    function Equal(Left : JsonNode; Right : JsonNode) return Boolean;
+   function To_String(Node : JsonNode) return String;
 end;
