@@ -26,15 +26,19 @@ package body Tests is
               (Kind => JsonString, Str => To_Unbounded_String ("cowa\bunga!")),
             Value    => To_Unbounded_String ("""cowa\\bunga!""")),
          4 =>
+           (Expected =>
+              (Kind => JsonString, Str => To_Unbounded_String ("")),
+            Value    => To_Unbounded_String ("""""")),
+         5 =>
            (Expected => (Kind => JsonBoolean, Bool => True),
             Value    => To_Unbounded_String ("true")),
-         5 =>
+         6 =>
            (Expected => (Kind => JsonBoolean, Bool => False),
             Value    => To_Unbounded_String ("false")),
-         6 =>
+         7 =>
            (Expected => (Kind => JsonNumber, Num => 1.5),
             Value    => To_Unbounded_String ("1.5")),
-         7 =>
+         8 =>
            (Expected => (Kind => JsonNumber, Num => 420.0),
             Value    => To_Unbounded_String ("  420  ")));
    begin

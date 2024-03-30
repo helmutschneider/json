@@ -275,7 +275,9 @@ package body Json is
             if Ch = ',' then
                 Parser_Advance (P);
             elsif Ch = ']' then
-                exit;
+                null;
+            else
+                Parser_Parse_Error (P, "Expected ',' or ']'.");
             end if;
         end loop;
 
