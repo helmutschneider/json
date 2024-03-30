@@ -1,8 +1,18 @@
 with Ada.Strings; use Ada.Strings;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Ada.Containers.Vectors;
 
 package Json is
-    type JsonKind is (JsonNull, JsonStr, JsonBool);
+    type JsonNode;
+    type JsonNodeAccess is access JsonNode;
+    package JsonVectors is new Ada.Containers.Vectors(
+        Index_Type => Positive,
+        Element_Type => JsonNodeAccess
+    );
+
+    subtype F32 is Float;
+    subtype F64 is Long_Float;
+    type JsonKind is (JsonNull, JsonStr, JsonBool, JsonArray);
     type JsonNode (Kind : JsonKind := JsonNull) is record
         case Kind is
             when JsonNull =>
@@ -11,6 +21,8 @@ package Json is
                 Str : Unbounded_String;
             when JsonBool =>
                 Bool : Boolean;
+            when JsonArray =>
+                Items : JsonVectors.Vector;
         end case;
     end record;
    
