@@ -118,5 +118,5 @@ package body Tests is
             Node := Json.Parse (X);
          end loop;
       end;
-   end;
-end;
+   end Run;
+end Tests;

@@ -1,3 +1,3 @@
 package Tests is
     procedure Run;
-end;
+end Tests;

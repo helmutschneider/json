@@ -24,5 +24,5 @@ begin
    end loop;
    Ada.Text_IO.Close (F);
    Parsed := Json.Parse (Str);
-   Put_Line(To_String(Parsed));
-end;
+   Put_Line (To_String (Parsed));
+end Main;
