@@ -41,7 +41,10 @@ procedure Main is
             Value    => To_Unbounded_String ("false")),
          8 =>
            (Expected => (Kind => JsonBoolean, Bool => False),
-            Value    => To_Unbounded_String ("f")));
+            Value    => To_Unbounded_String ("f")),
+         9 =>
+           (Expected => (Kind => JsonNumber, Num => 1.5),
+            Value    => To_Unbounded_String ("1.5")));
    begin
       for K in 1 .. Cases'Length loop
          Actual := Json.Parse (Cases (K).Value);
@@ -61,11 +64,13 @@ procedure Main is
          Items.Append (Node);
          Node := new JsonNode'(Kind => JsonBoolean, Bool => False);
          Items.Append (Node);
+         Node := new JsonNode'(Kind => JsonNumber, Num => 3.2);
+         Items.Append (Node);
          Expected := (Kind => JsonArray, Items => Items);
-         Actual   := Json.Parse ("[true, null, false]");
-         Assert(Equal(Expected, Actual));
+         Actual   := Json.Parse ("[true, null, false, 3.2]");
+         Assert (Equal (Expected, Actual));
       end;
-      Put_Line("Ok!");
+      Put_Line ("Ok!");
    end Run_Tests;
 
 begin

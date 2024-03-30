@@ -9,16 +9,15 @@ package Json is
         Index_Type => Positive,
         Element_Type => JsonNodeAccess
     );
-
-    subtype F32 is Float;
-    subtype F64 is Long_Float;
-    type JsonKind is (JsonNull, JsonBoolean, JsonString, JsonArray);
+    type JsonKind is (JsonNull, JsonBoolean, JsonNumber, JsonString, JsonArray);
     type JsonNode (Kind : JsonKind := JsonNull) is record
         case Kind is
             when JsonNull =>
                 null;
             when JsonBoolean =>
                 Bool : Boolean;
+            when JsonNumber =>
+                Num : Long_Float;
             when JsonString =>
                 Str : Unbounded_String;
             when JsonArray =>

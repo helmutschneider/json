@@ -41,6 +41,8 @@ package body Json is
                 return true;
             when JsonBoolean =>
                 return Left.Bool = Right.Bool;
+            when JsonNumber =>
+                return Left.Num = Right.Num;
             when JsonString =>
                 return Left.Str = Right.Str;
             when JsonArray =>
@@ -157,6 +159,26 @@ package body Json is
         return (Kind => JsonNull);
     end;
 
+    function Parser_Parse_Number(P : in out Parser) return JsonNode is
+        Ch : Character;
+        S : Unbounded_String;
+        F : Long_Float;
+    begin
+        -- super naive float parser implementation; we just
+        -- look for numbers and the dot character.
+        while not Parser_Is_EOF(P) loop
+            Ch := Parser_Token(P);
+            if Ch in '0' .. '9' or Ch = '.' then
+                S := S & Ch;
+            else
+                exit;
+            end if;
+            Parser_Advance(P);
+        end loop;
+        F := Long_Float'Value(To_String(S));
+        return (Kind => JsonNumber, Num => F);
+    end;
+
     function Parser_Parse_Next(P : in out Parser) return JsonNode; -- predeclared, yee!
     function Parser_Parse_Array(P : in out Parser) return JsonNode is
         Ch : Character;
@@ -200,9 +222,10 @@ package body Json is
         Parser_Skip_Whitespace(P);
         Ch := Parser_Token(P);
         Result := (case Ch is
-            when '"' => Parser_Parse_String(P),
-            when 't' | 'f' => Parser_Parse_Boolean(P),
             when 'n' => Parser_Parser_Null(P),
+            when 't' | 'f' => Parser_Parse_Boolean(P),
+            when '0' .. '9' => Parser_Parse_Number(P),
+            when '"' => Parser_Parse_String(P),
             when '[' => Parser_Parse_Array(P),
             when others => Parser_Parse_Error(P));
         return Result;
