@@ -9,6 +9,11 @@ package body Json is
         Index  : Positive; -- 1-indexed
     end record;
 
+    type Position is record
+        Line: Positive;
+        Column: Positive;
+    end record;
+
     JsonParseError : exception;
 
     function Is_Whitespace (Ch : Character) return Boolean is
@@ -18,6 +23,11 @@ package body Json is
             or Ch = ASCII.CR  -- \r
             or Ch = ASCII.HT; -- \t
     end Is_Whitespace;
+
+    function Char_At (S : Unbounded_String; Index : Positive) return Character is
+    begin
+        return Ada.Strings.Unbounded.Element(S, Index);
+    end;
 
     function To_String (Node : JsonNode; Depth : Natural) return String is
         Indent : Unbounded_String;
@@ -117,8 +127,33 @@ package body Json is
 
     function Parser_Peek (P : Parser; Offset : Natural) return Character is
     begin
-        return Ada.Strings.Unbounded.Element (P.Data, P.Index + Offset);
+        return Char_At (P.Data, P.Index + Offset);
     end Parser_Peek;
+
+    function Parser_Peek (P : Parser) return Character is
+    begin
+        return Parser_Peek(P, 0);
+    end Parser_Peek;
+
+    function Parser_Position (P : Parser) return Position is
+        Line : Positive := 1;
+        Column : Natural := 1;
+        Index : Positive := 1;
+        Ch : Character;
+    begin
+        while Index /= P.Index loop
+            Ch := Char_At(P.Data, Index);
+            if Ch = ASCII.LF then
+                Line := Line + 1;
+                Column := 0;
+            end if;
+            if Ch /= ASCII.CR then
+                Column := Column + 1;
+            end if;
+            Index := Index + 1;
+        end loop;
+        return (Line, Column);
+    end;
 
     function Parser_Is_EOF (P : in Parser; Offset : Natural) return Boolean is
     begin
@@ -130,19 +165,65 @@ package body Json is
         return Parser_Is_EOF (P, 0);
     end Parser_Is_EOF;
 
-    function Parser_Token (P : Parser) return Character is
-    begin
-        return Parser_Peek (P, 0);
-    end Parser_Token;
+    function Parser_Read_Erroneous_Word (P : Parser) return String is
+        Offset : Natural := 0;
+        Ch : Character;
+        Word : Unbounded_String;
+        Is_Delimiter : Boolean;
+    begin    
+        while not Parser_Is_EOF(P, Offset) loop
+            Ch := Parser_Peek(P, Offset);
+            Is_Delimiter := Is_Whitespace(Ch) or (case Ch is
+                when ',' | '"' | '[' | ']' | '{' | '}' => true,
+                when others => false
+            );
+            if Is_Delimiter then
+                exit;
+            end if;
+            Word := Word & Ch;
+            Offset := Offset + 1;
+        end loop;
+        return To_String(Word);
+    end;
 
-    procedure Parser_Parse_Error (P : Parser; Message : String) is
+    function Parser_Read_Line (P : Parser) return String is
+        StartIndex : Positive := P.Index;
+        EndIndex : Positive := P.Index;
         Ch : Character;
     begin
-        Ch := Parser_Token (P);
-        raise JsonParseError
-           with "Parse error at '" & Ch & "', index" & P.Index'Image & ". " &
-           Message;
-    end Parser_Parse_Error;
+        while StartIndex > 1 loop
+            Ch := Char_At(P.Data, StartIndex - 1);
+            if Ch = ASCII.LF or Ch = ASCII.CR then
+                exit;
+            end if;
+            StartIndex := StartIndex - 1;
+        end loop;
+        while EndIndex < (P.Length - 1) loop
+            Ch := Char_At(P.Data, EndIndex + 1);
+            if Ch = ASCII.LF or Ch = ASCII.CR then
+                exit;
+            end if;
+            EndIndex := EndIndex + 1;
+        end loop;
+        return To_String(P.Data)(StartIndex .. EndIndex);
+    end;
+
+    procedure Parser_Raise_Error (P : Parser; Message : String) is
+        Word : constant String := Parser_Read_Erroneous_Word(P);
+        Pos : constant Position := Parser_Position(P);
+        Line : constant String := Parser_Read_Line(P);
+        Squiggly : Unbounded_String;
+    begin
+        for K in 1 .. (Pos.Column - 1) loop
+            Squiggly := Squiggly & " ";
+        end loop;
+        for K in 1 .. Word'Length loop
+            Squiggly := Squiggly & "^";
+        end loop;
+
+        raise JsonParseError with "Parse error at line" & Pos.Line'Image & ", column" & Pos.Column'Image & ": " & Message
+            & ASCII.LF & "  " & Line & ASCII.LF & "  " & To_String(Squiggly);
+    end Parser_Raise_Error;
 
     procedure Parser_Expect (P : Parser; Expected : String) is
         S : Unbounded_String;
@@ -154,9 +235,9 @@ package body Json is
             S := S & Parser_Peek (P, K - 1);
         end loop;
         if To_String (S) /= Expected then
-            Parser_Parse_Error
+            Parser_Raise_Error
                (P,
-                "Expected '" & Expected & "', found '" & To_String (S) & "'.");
+                "expected '" & Expected & "', found '" & To_String (S) & "'");
         end if;
     end Parser_Expect;
 
@@ -181,7 +262,7 @@ package body Json is
 
     procedure Parser_Skip_Whitespace (P : in out Parser) is
     begin
-        while not Parser_Is_EOF (P) and Is_Whitespace (Parser_Token (P)) loop
+        while not Parser_Is_EOF (P) and Is_Whitespace (Parser_Peek (P)) loop
             Parser_Advance (P);
         end loop;
     end Parser_Skip_Whitespace;
@@ -195,7 +276,7 @@ package body Json is
         Parser_Advance (P);
 
         while not Parser_Is_EOF (P) loop
-            Ch := Parser_Token (P);
+            Ch := Parser_Peek (P);
 
             if Is_Reading_Escaped_Char then
                 Res                     := Res & Ch;
@@ -220,7 +301,7 @@ package body Json is
     function Parser_Parse_Boolean (P : in out Parser) return JsonNode is
         Ch : Character;
     begin
-        Ch := Parser_Token (P);
+        Ch := Parser_Peek (P);
 
         if Ch = 't' then
             Parser_Expect (P, "true");
@@ -232,7 +313,7 @@ package body Json is
             return (Kind => JsonBoolean, Bool => False);
         end if;
 
-        Parser_Parse_Error (P, "Expected 'true' or 'false'.");
+        Parser_Raise_Error (P, "expected 'true' or 'false'");
         return (Kind => JsonNull);
     end Parser_Parse_Boolean;
 
@@ -244,7 +325,7 @@ package body Json is
         -- super naive float parser implementation; we just
         -- look for numbers and the dot character.
         while not Parser_Is_EOF (P) loop
-            Ch := Parser_Token (P);
+            Ch := Parser_Peek (P);
             if Ch in '0' .. '9' or Ch = '.' then
                 S := S & Ch;
             else
@@ -267,17 +348,17 @@ package body Json is
         Parser_Advance (P);
         Parser_Skip_Whitespace (P);
 
-        while not Parser_Is_EOF (P) and Parser_Token (P) /= ']' loop
+        while not Parser_Is_EOF (P) and Parser_Peek (P) /= ']' loop
             Node := new JsonNode'(Parser_Parse_Next (P));
             Vec.Append (Node);
             Parser_Skip_Whitespace (P);
-            Ch := Parser_Token (P);
+            Ch := Parser_Peek (P);
             if Ch = ',' then
                 Parser_Advance (P);
             elsif Ch = ']' then
                 null;
             else
-                Parser_Parse_Error (P, "Expected ',' or ']'.");
+                Parser_Raise_Error (P, "expected ',' or ']'");
             end if;
         end loop;
 
@@ -296,7 +377,7 @@ package body Json is
         Parser_Advance (P);
         Parser_Skip_Whitespace (P);
 
-        while not Parser_Is_EOF (P) and Parser_Token (P) /= '}' loop
+        while not Parser_Is_EOF (P) and Parser_Peek (P) /= '}' loop
             Parser_Skip_Whitespace (P);
             Key := Parser_Parse_String (P).Str;
             Parser_Skip_Whitespace (P);
@@ -305,13 +386,13 @@ package body Json is
             Value := new JsonNode'(Parser_Parse_Next (P));
             Map.Include (To_String (Key), Value);
             Parser_Skip_Whitespace (P);
-            Ch := Parser_Token (P);
+            Ch := Parser_Peek (P);
             if Ch = ',' then
                 Parser_Advance (P);
             elsif Ch = '}' then
                 null;
             else
-                Parser_Parse_Error (P, "Expected ',' or '}'.");
+                Parser_Raise_Error (P, "expected ',' or '}'");
             end if;
         end loop;
 
@@ -326,7 +407,7 @@ package body Json is
         Result : JsonNode;
     begin
         Parser_Skip_Whitespace (P);
-        Ch := Parser_Token (P);
+        Ch := Parser_Peek (P);
         case Ch is
             when 'n' =>
                 return Parser_Parser_Null (P);
@@ -344,7 +425,7 @@ package body Json is
                 null;
         end case;
 
-        Parser_Parse_Error (P, "Expected a JSON node.");
+        Parser_Raise_Error (P, "expected a JSON node");
         return (Kind => JsonNull);
     end Parser_Parse_Next;
 
