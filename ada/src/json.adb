@@ -198,7 +198,7 @@ package body Json is
             end if;
             StartIndex := StartIndex - 1;
         end loop;
-        while EndIndex < (P.Length - 1) loop
+        while EndIndex < P.Length loop
             Ch := Char_At(P.Data, EndIndex + 1);
             if Ch = ASCII.LF or Ch = ASCII.CR then
                 exit;
