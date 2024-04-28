@@ -3,6 +3,8 @@ module Main (main) where
 import Control.Exception (assert)
 import Data.Char (ord)
 import Data.Map (Map, insert, empty, fromList)
+import System.Environment (getArgs)
+import System.IO (readFile)
 
 data JsonNode
   = JsonNull
@@ -26,7 +28,7 @@ instance Show JsonNode where
     JsonNull -> "null"
     JsonBool b -> show b
     JsonNumber n -> show n
-    JsonString s -> s
+    JsonString s -> "\"" ++ s ++ "\""
     JsonArray nodes -> show nodes
     JsonObject m -> show m
 
@@ -38,15 +40,11 @@ assertEq (a, b)
 type Input = String
 type Remainder = String
 
-parseString :: (Input, String, Bool) -> (JsonNode, Remainder)
-parseString (input, output, isReadingEscapedChar) =
-  let (h : t) = input
-   in if isReadingEscapedChar
-        then parseString (t, output ++ [h], False)
-        else case h of
-          '\\' -> parseString (t, output, True)
-          '"' -> (JsonString output, t)
-          _ -> parseString (t, output ++ [h], False)
+parseString :: (Input, String) -> (JsonNode, Remainder)
+parseString (input, output) = case input of
+  ('\\' : h : t) -> parseString (t, output ++ [h])
+  ('"' : t) -> (JsonString output, t)
+  (h : t) -> parseString (t, output ++ [h])
 
 parseArray :: (Input, [JsonNode]) -> (JsonNode, Remainder)
 parseArray (input, output) = case skipWhitespace input of
@@ -81,7 +79,7 @@ parseObject (input, output) =
     (',' : t) -> parseObject(t, output)
     _ ->
       let x1 = expect ('"', s) in
-      let (JsonString key, x2) = parseString (x1, "", False) in
+      let (JsonString key, x2) = parseString (x1, "") in
       let x3 = expect (':', skipWhitespace x2) in
       let (node, x4) = parseNext x3 in
       parseObject (x4, insert key node output)
@@ -96,7 +94,7 @@ parseNext p =
           ('n' : 'u' : 'l' : 'l' : t) -> (JsonNull, t)
           ('t' : 'r' : 'u' : 'e' : t) -> (JsonBool True, t)
           ('f' : 'a' : 'l' : 's' : 'e' : t) -> (JsonBool False, t)
-          ('"' : t) -> parseString (t, "", False)
+          ('"' : t) -> parseString (t, "")
           ('[' : t) -> parseArray (t, [])
           ('{' : t) -> parseObject (t, empty)
 
@@ -165,4 +163,11 @@ runTests = do
 
 main :: IO ()
 main = do
-  runTests
+  runTests;
+  args <- getArgs;
+  case args of
+    (h : _) -> do
+      s <- readFile h;
+      let n = parse s
+      putStrLn (show n)
+    _ -> return ()
