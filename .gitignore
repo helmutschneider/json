@@ -19,6 +19,7 @@ Thumbs.db
 /pascal/build
 /zig/zig-cache
 /ada/build
+/haskell/build
 
 .env
 
